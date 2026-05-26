@@ -91,11 +91,17 @@ def banner(msg: str) -> None:
 
 
 def wait_for_receipt(w3: Web3, tx_hash, label: str) -> dict:
-    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=600)
     status = "OK" if receipt.status == 1 else "FAIL"
     print(f"  {label:<32}  {status}  gas={receipt.gasUsed:>10,}  "
           f"block={receipt.blockNumber}")
     return receipt
+
+
+def boosted_gas_price(w3: Web3) -> int:
+    """Sepolia gets congested; bid 1.5x the reported gas price to ensure
+    timely inclusion. Returns wei/gas as an int."""
+    return int(w3.eth.gas_price * 3 // 2)
 
 
 def fund_bidder(w3: Web3, admin: Account, bidder_addr: str, amount_wei: int):
@@ -104,7 +110,7 @@ def fund_bidder(w3: Web3, admin: Account, bidder_addr: str, amount_wei: int):
         "to":       bidder_addr,
         "value":    amount_wei,
         "gas":      21_000,
-        "gasPrice": w3.eth.gas_price,
+        "gasPrice": boosted_gas_price(w3),
         "nonce":    nonce,
         "chainId":  w3.eth.chain_id,
     }
@@ -143,7 +149,7 @@ def deploy_contract(w3: Web3, admin: Account, abi: list, bytecode: str):
         "from":     admin.address,
         "nonce":    nonce,
         "gas":      3_000_000,
-        "gasPrice": w3.eth.gas_price,
+        "gasPrice": boosted_gas_price(w3),
         "chainId":  w3.eth.chain_id,
     })
     signed = admin.sign_transaction(tx)
@@ -162,7 +168,7 @@ def send_tx(w3: Web3, account: Account, fn_call, value_wei: int = 0):
         "from":     account.address,
         "nonce":    nonce,
         "gas":      500_000,
-        "gasPrice": w3.eth.gas_price,
+        "gasPrice": boosted_gas_price(w3),
         "value":    value_wei,
         "chainId":  w3.eth.chain_id,
     })
@@ -225,7 +231,10 @@ def main():
     # 2. Generate n bidder wallets
     banner(f"STEP 2  :  generate + fund {n} bidder wallets")
     bidders = [Account.create() for _ in range(n)]
-    fund_amount = MIN_DEPOSIT_WEI + Web3.to_wei(0.001, "ether")
+    # Per-bidder budget: 0.001 ETH deposit + ~0.004 ETH for gas across the
+    # three transactions each bidder runs (register, commit, share-hash).
+    # Sepolia gas can spike, so leave plenty of buffer.
+    fund_amount = MIN_DEPOSIT_WEI + Web3.to_wei(0.004, "ether")
     for b in bidders:
         fund_bidder(w3, admin, b.address, fund_amount)
 
