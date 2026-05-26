@@ -63,8 +63,11 @@ except ImportError:
 
 from solcx import compile_source, install_solc, set_solc_version
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
 from eth_account import Account
+
+# Sepolia is post-Merge PoS, so no PoA middleware is needed. (In web3.py
+# 7+, `geth_poa_middleware` was renamed to `ExtraDataToPOAMiddleware`;
+# we don't inject any middleware here.)
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -96,7 +99,7 @@ def wait_for_receipt(w3: Web3, tx_hash, label: str) -> dict:
 
 
 def fund_bidder(w3: Web3, admin: Account, bidder_addr: str, amount_wei: int):
-    nonce = w3.eth.get_transaction_count(admin.address)
+    nonce = w3.eth.get_transaction_count(admin.address, " pending\)
     tx = {
         "to":       bidder_addr,
         "value":    amount_wei,
@@ -106,7 +109,7 @@ def fund_bidder(w3: Web3, admin: Account, bidder_addr: str, amount_wei: int):
         "chainId":  w3.eth.chain_id,
     }
     signed = admin.sign_transaction(tx)
-    tx_hash = w3.eth.send_raw_transaction(signed.rawTransaction)
+    tx_hash = w3.eth.send_raw_transaction(getattr(signed, "raw_transaction", None) or signed.rawTransaction)
     return wait_for_receipt(w3, tx_hash, f"fund {bidder_addr[:10]}...")
 
 
@@ -130,7 +133,7 @@ def compile_contract():
 def deploy_contract(w3: Web3, admin: Account, abi: list, bytecode: str):
     print("[+] Deploying MPCAuction.sol to Sepolia ...")
     contract = w3.eth.contract(abi=abi, bytecode=bytecode)
-    nonce = w3.eth.get_transaction_count(admin.address)
+    nonce = w3.eth.get_transaction_count(admin.address, " pending\)
     tx = contract.constructor(
         MIN_DEPOSIT_WEI,
         REGISTRATION_WINDOW,
@@ -144,7 +147,7 @@ def deploy_contract(w3: Web3, admin: Account, abi: list, bytecode: str):
         "chainId":  w3.eth.chain_id,
     })
     signed = admin.sign_transaction(tx)
-    tx_hash = w3.eth.send_raw_transaction(signed.rawTransaction)
+    tx_hash = w3.eth.send_raw_transaction(getattr(signed, "raw_transaction", None) or signed.rawTransaction)
     receipt = wait_for_receipt(w3, tx_hash, "deploy MPCAuction")
     contract_addr = receipt.contractAddress
     print(f"    -> contract address: {contract_addr}")
@@ -154,7 +157,7 @@ def deploy_contract(w3: Web3, admin: Account, abi: list, bytecode: str):
 
 
 def send_tx(w3: Web3, account: Account, fn_call, value_wei: int = 0):
-    nonce = w3.eth.get_transaction_count(account.address)
+    nonce = w3.eth.get_transaction_count(account.address, \pending\)
     tx = fn_call.build_transaction({
         "from":     account.address,
         "nonce":    nonce,
@@ -164,7 +167,7 @@ def send_tx(w3: Web3, account: Account, fn_call, value_wei: int = 0):
         "chainId":  w3.eth.chain_id,
     })
     signed = account.sign_transaction(tx)
-    return w3.eth.send_raw_transaction(signed.rawTransaction)
+    return w3.eth.send_raw_transaction(getattr(signed, "raw_transaction", None) or signed.rawTransaction)
 
 
 def fake_pedersen_commitment(bid: int) -> bytes:
@@ -201,7 +204,6 @@ def main():
         sys.exit("Set SEPOLIA_RPC_URL and SEPOLIA_PRIVATE_KEY env vars.")
 
     w3 = Web3(Web3.HTTPProvider(rpc_url))
-    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
     if not w3.is_connected():
         sys.exit("Web3 connection failed.")
     print(f"[+] Connected to chain {w3.eth.chain_id} "
