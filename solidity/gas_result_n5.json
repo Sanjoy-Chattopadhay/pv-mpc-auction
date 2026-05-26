@@ -1,0 +1,13 @@
+{
+  "n": 5,
+  "chain_id": 11155111,
+  "contract": "0xE8bF0981d3b75413F669279A7A1Fd2807c19a2FB",
+  "deploy_gas": 1594691,
+  "register_gas": 138893,
+  "commit_gas": 166816,
+  "share_gas": 76311,
+  "finalize_gas": 169984,
+  "total_gas": 3674775,
+  "explorer": "https://sepolia.etherscan.io/address/0xE8bF0981d3b75413F669279A7A1Fd2807c19a2FB",
+  "timestamp": 1779790247
+}

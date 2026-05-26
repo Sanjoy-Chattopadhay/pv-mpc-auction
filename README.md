@@ -2,7 +2,7 @@
 
 > A privacy-preserving sealed-bid auction protocol composing Pedersen commitments, Shamir secret sharing, and Schnorr zero-knowledge proofs, anchored to an Ethereum smart contract.
 >
-> Companion code for the paper accepted at **ICST 2026** (8th International Conference on Intelligent Computing and Sustainable Technologies, IIT Patna, August 1–2, 2026).
+> Companion code for the paper submitted to **ICST 2026** (8th International Conference on Intelligent Computing and Sustainable Technologies, IIT Patna, August 1–2, 2026).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -98,6 +98,23 @@ You will need:
 
 ---
 
+## Empirical results
+
+Real Sepolia testnet gas costs (measured, n=5):
+
+| Phase | Gas / bidder | Notes |
+|---|---:|---|
+| Contract deployment (one-shot) | 1,594,691 | independent of n |
+| Phase 1 — `register()` | 138,893 | O(1) per bidder |
+| Phase 2 — `submitCommitment(C, π)` | 166,816 | O(1) per bidder |
+| Phase 3 — `submitShareHashes(root)` | 76,311 | O(1) per bidder |
+| Phase 5 — `finalize(...)` | 169,984 at n=5 | scales linearly via refund loop |
+| **Total per auction at n=5 (excl. deploy)** | **2,080,084** | well under Ethereum's 30M block limit |
+
+Canonical deployment: **[`0xE8bF0981d3b75413F669279A7A1Fd2807c19a2FB`](https://sepolia.etherscan.io/address/0xE8bF0981d3b75413F669279A7A1Fd2807c19a2FB)** on the Sepolia testnet (Solc 0.8.20, optimizer enabled, 200 runs).
+
+---
+
 ## Reproducing the paper's results
 
 | Result | How to reproduce |
@@ -105,7 +122,7 @@ You will need:
 | Table 1 (primitive latency) | `python -m pv_mpc_auction.benchmark --out figures`; values in `figures/primitives.json` |
 | Figure 3(a) scalability | same command as above; `figures/fig_auction_scalability.pdf` |
 | Figure 3(b) FHE comparison | projection from published ratios; numbers hard-coded in `benchmark.py` |
-| Table 3 (Sepolia gas) | `python solidity/deploy_and_run.py --n {5,10,20}` |
+| Table 3 (Sepolia gas) | `python solidity/deploy_and_run.py --n 5` (canonical run committed as `solidity/gas_result_n5.json`; deployed contract: [`0xE8bF...a2FB`](https://sepolia.etherscan.io/address/0xE8bF0981d3b75413F669279A7A1Fd2807c19a2FB)) |
 | Table 4 (security comparison) | qualitative — comes from the literature surveyed in §2 |
 
 ---

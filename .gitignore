@@ -94,8 +94,9 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
-# Benchmark results (large)
-gas_result_n*.json
+# Benchmark results -- keep gas_result_n*.json committed so reviewers can
+# verify the Sepolia gas table without re-running the full deployment.
+# (Local figure JSONs are still ignored because they're auto-regenerated.)
 figures/scalability.json
 figures/primitives.json
 

@@ -164,10 +164,13 @@ def deploy_contract(w3: Web3, admin: Account, abi: list, bytecode: str):
 
 def send_tx(w3: Web3, account: Account, fn_call, value_wei: int = 0):
     nonce = w3.eth.get_transaction_count(account.address, "pending")
+    # Gas limit 200k: register/commit/share-hash all use ~135-167k actual
+    # gas (measured on Sepolia), so 200k gives 20% headroom while keeping
+    # the per-tx wallet lockup small enough for our 0.008 ETH bidder budget.
     tx = fn_call.build_transaction({
         "from":     account.address,
         "nonce":    nonce,
-        "gas":      500_000,
+        "gas":      200_000,
         "gasPrice": boosted_gas_price(w3),
         "value":    value_wei,
         "chainId":  w3.eth.chain_id,
@@ -231,10 +234,13 @@ def main():
     # 2. Generate n bidder wallets
     banner(f"STEP 2  :  generate + fund {n} bidder wallets")
     bidders = [Account.create() for _ in range(n)]
-    # Per-bidder budget: 0.001 ETH deposit + ~0.004 ETH for gas across the
-    # three transactions each bidder runs (register, commit, share-hash).
-    # Sepolia gas can spike, so leave plenty of buffer.
-    fund_amount = MIN_DEPOSIT_WEI + Web3.to_wei(0.004, "ether")
+    # Per-bidder budget: 0.001 ETH deposit + ~0.007 ETH lockup buffer for
+    # the three transactions each bidder runs (register, commit, share-hash).
+    # Ethereum reserves gas_limit * gas_price upfront, so with our
+    # 200k-gas limit (see send_tx) and Sepolia at ~6 gwei * 1.5 boost,
+    # each tx ties up ~0.0018 ETH momentarily. 0.008 ETH covers it with
+    # plenty of headroom even if Sepolia gas spikes 3x mid-run.
+    fund_amount = MIN_DEPOSIT_WEI + Web3.to_wei(0.007, "ether")
     for b in bidders:
         fund_bidder(w3, admin, b.address, fund_amount)
 
