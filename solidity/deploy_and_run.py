@@ -99,7 +99,7 @@ def wait_for_receipt(w3: Web3, tx_hash, label: str) -> dict:
 
 
 def fund_bidder(w3: Web3, admin: Account, bidder_addr: str, amount_wei: int):
-    nonce = w3.eth.get_transaction_count(admin.address, " pending\)
+    nonce = w3.eth.get_transaction_count(admin.address, "pending")
     tx = {
         "to":       bidder_addr,
         "value":    amount_wei,
@@ -133,7 +133,7 @@ def compile_contract():
 def deploy_contract(w3: Web3, admin: Account, abi: list, bytecode: str):
     print("[+] Deploying MPCAuction.sol to Sepolia ...")
     contract = w3.eth.contract(abi=abi, bytecode=bytecode)
-    nonce = w3.eth.get_transaction_count(admin.address, " pending\)
+    nonce = w3.eth.get_transaction_count(admin.address, "pending")
     tx = contract.constructor(
         MIN_DEPOSIT_WEI,
         REGISTRATION_WINDOW,
@@ -157,7 +157,7 @@ def deploy_contract(w3: Web3, admin: Account, abi: list, bytecode: str):
 
 
 def send_tx(w3: Web3, account: Account, fn_call, value_wei: int = 0):
-    nonce = w3.eth.get_transaction_count(account.address, \pending\)
+    nonce = w3.eth.get_transaction_count(account.address, "pending")
     tx = fn_call.build_transaction({
         "from":     account.address,
         "nonce":    nonce,
