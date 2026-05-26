@@ -1,0 +1,16 @@
+# Core --- pure Python, no native deps
+# (cryptography primitives use only the standard library)
+
+# Optional: Ethereum chain backend
+web3>=6.20.0
+py-solc-x>=2.0.2
+python-dotenv>=1.0.0
+eth-account>=0.10.0
+
+# Optional: plotting and benchmarks
+matplotlib>=3.7.0
+numpy>=1.24.0
+
+# Test suite
+pytest>=7.4.0
+pytest-cov>=4.1.0

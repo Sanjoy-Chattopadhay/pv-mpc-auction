@@ -1,0 +1,105 @@
+# ============================================================================
+# DO NOT PUSH THE UNPUBLISHED PAPER TO A PUBLIC REPO
+# ----------------------------------------------------------------------------
+# Until the paper is accepted and the camera-ready version is published in
+# the Springer LNNS proceedings, the LaTeX source, the bibliography, and the
+# figures must stay local. Posting them publicly before peer review can:
+#   - Trip Turnitin/iThenticate against your own submission
+#   - Surface in reviewer searches and complicate informal anonymity
+#   - Run afoul of some publishers' prior-publication policies
+#
+# AFTER acceptance + camera-ready, you can lift this block to make the
+# artifact fully reproducible from source.
+# ============================================================================
+paper-icst2026.tex
+paper-icst2026.pdf
+references.bib
+llncs.cls
+splncs04.bst
+figures/
+README-ICST.md
+
+# Compiled / intermediate PDFs of the paper, just in case
+*.synctex.gz
+
+# Smoke-test artifacts
+_smoke_test.py
+_smoke_test.out
+_hello.out
+_import.out
+_diag.out
+
+# Secrets
+.env
+.env.*
+*.key
+*_secret*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Test / coverage
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+
+# Jupyter
+.ipynb_checkpoints/
+
+# LaTeX
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.run.xml
+*.bcf
+*.lof
+*.lot
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Benchmark results (large)
+gas_result_n*.json
+figures/scalability.json
+figures/primitives.json
+
+# Solidity build artifacts
+solidity/build/
+solidity/cache/
+solidity/artifacts/
