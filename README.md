@@ -60,7 +60,7 @@ The result: a sealed-bid auction with bid privacy, public verifiability, fairnes
 
 1. Open the notebook on Colab:
 
-   [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR_USERNAME/pv-mpc-auction/blob/main/notebooks/PV_MPC_Auction_Colab.ipynb)
+   [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Sanjoy-Chattopadhay/pv-mpc-auction/blob/main/notebooks/PV_MPC_Auction_Colab.ipynb)
 
 2. Edit Cell 1 to point at your fork.
 3. *Runtime → Run all.*
@@ -69,7 +69,7 @@ The result: a sealed-bid auction with bid privacy, public verifiability, fairnes
 ### Path B: Local Python (offline experiments only)
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/pv-mpc-auction.git
+git clone https://github.com/Sanjoy-Chattopadhay/pv-mpc-auction.git
 cd pv-mpc-auction
 pip install -e ".[dev]"
 pytest                          # all tests should pass (~10 seconds)
