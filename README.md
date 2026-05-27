@@ -274,24 +274,6 @@ Security is argued under the semi-honest model with static corruption. A malicio
 
 ---
 
-## Citation
-
-If you use this code or build on the work, please cite:
-
-```bibtex
-@inproceedings{chattopadhyay2026pvmpc,
-  author    = {Chattopadhyay, Sanjoy},
-  title     = {Blockchain-Anchored Sealed-Bid Auctions via {Pedersen} Commitments,
-               {Shamir} Sharing, and {Schnorr} Zero-Knowledge Proofs},
-  booktitle = {8th International Conference on Intelligent Computing and
-               Sustainable Technologies (ICST 2026)},
-  publisher = {Springer Lecture Notes in Networks and Systems},
-  year      = {2026},
-  address   = {Patna, India}
-}
-```
-
----
 
 ## License and contact
 
