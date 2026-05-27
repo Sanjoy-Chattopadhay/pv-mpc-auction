@@ -280,7 +280,7 @@ If you use this code or build on the work, please cite:
 
 ```bibtex
 @inproceedings{chattopadhyay2026pvmpc,
-  author    = {Chattopadhyay, Sanjoy},
+  author    = {Chattopadhyay, Sanjoy and Howlader, Jaydeep},
   title     = {Blockchain-Anchored Sealed-Bid Auctions via {Pedersen} Commitments,
                {Shamir} Sharing, and {Schnorr} Zero-Knowledge Proofs},
   booktitle = {8th International Conference on Intelligent Computing and
@@ -297,6 +297,9 @@ If you use this code or build on the work, please cite:
 
 **License:** MIT — see [`LICENSE`](LICENSE). Use it freely; please cite the paper if you build on the design.
 
-**Author:** Sanjoy Chattopadhyay — Assistant Professor, Department of Computer Science & Engineering, Pranveer Singh Institute of Technology (PSIT), Kanpur, India — `sanjoy.chattopadhyay@psit.ac.in`
+**Authors:**
 
-**Acknowledgments:** Sepolia testnet ETH for on-chain experiments was sourced from public faucets. Thanks to colleagues at PSIT Kanpur and the ICST 2026 review committee for early feedback.
+- **Sanjoy Chattopadhyay** — Assistant Professor, Department of Computer Science & Engineering, Pranveer Singh Institute of Technology (PSIT), Kanpur, India — `sanjoy.chattopadhyay@psit.ac.in`
+- **Jaydeep Howlader** ([ORCID 0000-0003-3572-8168](https://orcid.org/0000-0003-3572-8168)) — Department of Computer Science & Engineering, National Institute of Technology Durgapur, West Bengal, India — `jhowlader.cse@nitdgp.ac.in`
+
+**Acknowledgments:** Sepolia testnet ETH for on-chain experiments was sourced from public faucets. The authors thank colleagues at PSIT Kanpur and NIT Durgapur for early feedback.
