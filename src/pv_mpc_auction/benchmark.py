@@ -2,11 +2,14 @@
 
 Run as:
 
-    python -m pv_mpc_auction.benchmark --out figures/
+    python -m pv_mpc_auction.benchmark --out figures/ --trials 5
 
 This regenerates `fig_auction_scalability.pdf` and the primitive-cost
-table reported in §7 of the paper, using the small test group for
+table reported in section 7 of the paper, using the small test group for
 speed; pass `--full` to use the production 2048-bit RFC 3526 group.
+
+The script prints a copy-paste-ready summary of per-n totals that you
+can drop straight into the paper's abstract / Section 7.3.
 """
 
 from __future__ import annotations
@@ -31,7 +34,6 @@ def bench_primitives(group, trials: int = 50) -> Dict[str, float]:
     """Mean latency (ms) of every cryptographic primitive."""
     out: Dict[str, float] = {}
 
-    # Pedersen commit + verify
     times = []
     for _ in range(trials):
         m = secrets.randbelow(group.q)
@@ -48,7 +50,6 @@ def bench_primitives(group, trials: int = 50) -> Dict[str, float]:
         times.append((time.perf_counter() - t) * 1000)
     out["pedersen_verify_ms"] = statistics.mean(times)
 
-    # ZKP prove + verify
     times = []
     for _ in range(trials):
         m = secrets.randbelow(group.q)
@@ -66,7 +67,6 @@ def bench_primitives(group, trials: int = 50) -> Dict[str, float]:
         times.append((time.perf_counter() - t) * 1000)
     out["zkp_verify_ms"] = statistics.mean(times)
 
-    # Shamir split + reconstruct (3, 5)
     times = []
     for _ in range(trials):
         s = secrets.randbelow(group.q)
@@ -95,10 +95,6 @@ def bench_scalability(
     bit_length: int = 16,
     trials: int = 3,
 ) -> List[Dict]:
-    """For each n in `n_values`, run the protocol `trials` times.
-
-    Returns a list of records, one per (n, trial).
-    """
     records = []
     for n in n_values:
         for k in range(trials):
@@ -122,13 +118,14 @@ def bench_scalability(
                 "winning_bid": result.winning_bid,
                 "verified": result.verified,
             })
-            print(f"  n={n:>2}  trial={k}  total={result.timings.total*1000:7.1f} ms  "
+            print(f"  n={n:>2}  trial={k}  total={result.timings.total*1000:9.1f} ms  "
                   f"winner=P{result.winner_index}")
     return records
 
 
 # -----------------------------------------------------------------------------
-# Plotting (optional: only if matplotlib is installed)
+# Plotting: 2 panels --- (a) stacked linear, (b) stacked log (so all 5
+# phases are visible even when registration/sharing are tiny).
 # -----------------------------------------------------------------------------
 def plot_scalability(records: List[Dict], out_path: Path) -> None:
     try:
@@ -137,7 +134,6 @@ def plot_scalability(records: List[Dict], out_path: Path) -> None:
         print("[!] matplotlib not installed; skipping plot.")
         return
 
-    # Aggregate per n
     by_n: Dict[int, Dict[str, List[float]]] = {}
     for rec in records:
         n = rec["n"]
@@ -153,41 +149,71 @@ def plot_scalability(records: List[Dict], out_path: Path) -> None:
         by_n[n]["verification"].append(rec["verification_s"] * 1000)
 
     ns = sorted(by_n.keys())
-    means = lambda key: [statistics.mean(by_n[n][key]) for n in ns]
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
+    mean_of = lambda key: [statistics.mean(by_n[n][key]) for n in ns]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.2))
 
     phases = ["registration", "commitment", "sharing", "mpc", "verification"]
-    colours = ["#94a3b8", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"]
-    bottoms = [0] * len(ns)
-    for phase, c in zip(phases, colours):
-        vals = means(phase)
-        ax1.bar(ns, vals, bottom=bottoms, color=c, label=phase.capitalize())
-        bottoms = [b + v for b, v in zip(bottoms, vals)]
-    ax1.set_xlabel("Number of bidders n")
-    ax1.set_ylabel("Latency (ms)")
-    ax1.set_title("(a) Per-phase breakdown")
-    ax1.legend(fontsize=8, frameon=False)
+    labels = ["Registration", "Commitment", "Secret Sharing",
+              "MPC Computation", "Verification"]
+    colours = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#a855f7"]
 
-    ax2.plot(ns, means("total"), marker="o", color="#1e3a8a")
-    ax2.fill_between(
-        ns,
-        [statistics.mean(by_n[n]["total"]) - statistics.stdev(by_n[n]["total"])
-         if len(by_n[n]["total"]) > 1 else statistics.mean(by_n[n]["total"])
-         for n in ns],
-        [statistics.mean(by_n[n]["total"]) + statistics.stdev(by_n[n]["total"])
-         if len(by_n[n]["total"]) > 1 else statistics.mean(by_n[n]["total"])
-         for n in ns],
-        alpha=0.15,
-        color="#1e3a8a",
-    )
-    ax2.set_xlabel("Number of bidders n")
-    ax2.set_ylabel("End-to-end latency (ms)")
-    ax2.set_title("(b) Aggregate")
-    ax2.grid(alpha=0.3)
+    # ---- (a) linear stacked bar ----
+    bottoms = [0.0] * len(ns)
+    for phase, lab, c in zip(phases, labels, colours):
+        vals = mean_of(phase)
+        ax1.bar(ns, vals, bottom=bottoms, color=c, label=lab,
+                width=1.6, edgecolor="white", linewidth=0.4)
+        bottoms = [b + v for b, v in zip(bottoms, vals)]
+    ax1.set_xlabel("Number of Bidders (n)")
+    ax1.set_ylabel("Execution Time (ms)")
+    ax1.set_title("(a) Phase-wise Execution Time")
+    ax1.legend(fontsize=8, frameon=True, loc="upper left")
+    ax1.grid(axis="y", alpha=0.25)
+
+    # ---- (b) grouped bars on log scale: every phase visible ----
+    import numpy as np
+    x = np.arange(len(ns))
+    w = 0.16
+    for i, (phase, lab, c) in enumerate(zip(phases, labels, colours)):
+        ax2.bar(x + (i - 2) * w, mean_of(phase), w, color=c, label=lab)
+    ax2.set_yscale("log")
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(ns)
+    ax2.set_xlabel("Number of Bidders (n)")
+    ax2.set_ylabel("Execution Time (ms, log scale)")
+    ax2.set_title("(b) Per-phase on Log Scale")
+    ax2.grid(axis="y", alpha=0.25, which="both")
+    ax2.legend(fontsize=7, frameon=True, loc="upper left")
 
     plt.tight_layout()
     plt.savefig(out_path, bbox_inches="tight")
     print(f"[+] Wrote {out_path}")
+
+
+# -----------------------------------------------------------------------------
+# Pretty summary --- copy-paste ready for the paper
+# -----------------------------------------------------------------------------
+def print_paper_summary(records: List[Dict]) -> None:
+    by_n: Dict[int, List[float]] = {}
+    for rec in records:
+        by_n.setdefault(rec["n"], []).append(rec["total_s"] * 1000)
+
+    print("\n" + "=" * 70)
+    print("  COPY-PASTE-READY SUMMARY FOR THE PAPER")
+    print("=" * 70)
+    print(f"  {'n':>4}  {'mean (ms)':>12}  {'std (ms)':>10}  {'mean (s)':>10}")
+    print("  " + "-" * 50)
+    for n in sorted(by_n):
+        vals = by_n[n]
+        m = statistics.mean(vals)
+        s = statistics.stdev(vals) if len(vals) > 1 else 0.0
+        print(f"  {n:>4}  {m:>12.1f}  {s:>10.1f}  {m / 1000:>10.2f}")
+    n_max = max(by_n)
+    mean_max = statistics.mean(by_n[n_max])
+    print(f"\n  Headline for abstract:  ~{mean_max / 1000:.1f} s at n={n_max}")
+    print(f"  Headline in ms       :  ~{mean_max:.0f} ms at n={n_max}")
+    print("=" * 70 + "\n")
 
 
 # -----------------------------------------------------------------------------
@@ -200,7 +226,7 @@ def main() -> None:
     parser.add_argument("--full", action="store_true",
                         help="use 2048-bit RFC 3526 group (slow but realistic)")
     parser.add_argument("--n-values", type=int, nargs="+",
-                        default=[3, 5, 7, 10, 12, 15, 20])
+                        default=[3, 5, 10, 15, 20])
     parser.add_argument("--trials", type=int, default=3)
     parser.add_argument("--bit-length", type=int, default=16)
     args = parser.parse_args()
@@ -226,7 +252,9 @@ def main() -> None:
 
     print("\n[+] Plotting...")
     plot_scalability(records, args.out / "fig_auction_scalability.pdf")
-    print("\n[+] Done. See", args.out)
+
+    print_paper_summary(records)
+    print("[+] Done. See", args.out)
 
 
 if __name__ == "__main__":
