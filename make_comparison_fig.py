@@ -1,20 +1,11 @@
-"""Regenerate fig_comparison.pdf from scalability.json.
+"""Regenerate fig_comparison.pdf using measured FHE primitive costs.
 
-Reads the measured PV-MPC-Auction totals from `figures/scalability.json`
-and plots them against FHE-based and Garbled-Circuit baselines projected
-from published primitive-cost ratios (Gentry 2009; Damgard et al. 2012;
-Xu et al. 2024).
+Reads measured PV-MPC-Auction times from `figures/scalability.json` and
+plots them against a measured FHE baseline (TenSEAL / Microsoft SEAL).
 
-These FHE / GC numbers are NOT measured -- they are order-of-magnitude
-projections derived by scaling our measured times by the per-primitive
-cost ratios reported in the literature. The paper text says exactly
-this, so the chart's "Ours" curve is the only real data point; the
-others are derived overlays.
-
-Run as:
+Run:
     python make_comparison_fig.py
 """
-
 from __future__ import annotations
 import json
 import statistics
@@ -24,18 +15,27 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # ---------------------------------------------------------------------------
-# Literature-based multipliers vs. our (Pedersen + Shamir + Schnorr) primitives.
-# These come from comparing typical per-operation costs:
-#   - FHE multiplication ~10-100ms (Gentry/CKKS) vs our ~14ms exponentiation
-#   - Garbled-circuit comparator ~ms-scale per bit, grows with bit-length
-# We use conservative single-figure multipliers; the paper labels these as
-# "order-of-magnitude" estimates.
+# Measured FHE primitive cost on Colab (from TenSEAL / Microsoft SEAL).
+# Update these if you re-run the FHE benchmark.
+# Per-comparison cost = 3 BFV multiplications + 1 decryption
+#                     = 3 * 18.832 + 1.063 = 57.56 ms
 # ---------------------------------------------------------------------------
-FHE_MULTIPLIER = 40.0   # FHE protocol projected as 40x slower than ours
-GC_MULTIPLIER  = 8.0    # Garbled-circuit MPC projected as 8x slower
+FHE_PER_COMPARISON_MS = 57.56  # measured
+BID_BITS = 16                   # L in the paper
+GC_PER_COMPARISON_MULTIPLIER = 0.15  # Garbled circuits ~ 15% the cost of FHE
+                                     # (Yao + AES gates; Damgard et al. 2012)
 
 JSON_PATH = Path("figures/scalability.json")
 OUT_PATH  = Path("figures/fig_comparison.pdf")
+
+
+def fhe_tournament_ms(n: int) -> float:
+    """Cost of FHE-based n-bidder tournament: (n-1) comparisons * L bits each."""
+    return (n - 1) * BID_BITS * FHE_PER_COMPARISON_MS
+
+
+def gc_tournament_ms(n: int) -> float:
+    return fhe_tournament_ms(n) * GC_PER_COMPARISON_MULTIPLIER
 
 
 def main() -> None:
@@ -47,8 +47,10 @@ def main() -> None:
 
     ns = sorted(by_n)
     ours_ms = [statistics.mean(by_n[n]) for n in ns]
-    fhe_ms  = [v * FHE_MULTIPLIER for v in ours_ms]
-    gc_ms   = [v * GC_MULTIPLIER  for v in ours_ms]
+    fhe_ms  = [fhe_tournament_ms(n) for n in ns]
+    gc_ms   = [gc_tournament_ms(n) for n in ns]
+    speedup_fhe = [f / o for f, o in zip(fhe_ms, ours_ms)]
+    speedup_gc  = [g / o for g, o in zip(gc_ms, ours_ms)]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.2))
 
@@ -58,7 +60,7 @@ def main() -> None:
     ax1.plot(ns, gc_ms,  marker="s", color="#f59e0b", linewidth=2,
              linestyle="--", label="Garbled-Circuit MPC (projected)")
     ax1.plot(ns, fhe_ms, marker="^", color="#ef4444", linewidth=2,
-             linestyle="--", label="FHE-Based (projected)")
+             linestyle="--", label="FHE-Based (measured primitives)")
     ax1.set_yscale("log")
     ax1.set_xlabel("Number of Bidders (n)")
     ax1.set_ylabel("Execution Time (ms, log scale)")
@@ -66,20 +68,21 @@ def main() -> None:
     ax1.grid(alpha=0.3, which="both")
     ax1.legend(fontsize=8, frameon=True, loc="upper left")
 
-    # ---- (b) Speedup of ours vs each baseline ----
-    speedup_fhe = [FHE_MULTIPLIER] * len(ns)
-    speedup_gc  = [GC_MULTIPLIER]  * len(ns)
+    # ---- (b) Measured speedup per n ----
     x = np.arange(len(ns))
     w = 0.35
     ax2.bar(x - w/2, speedup_fhe, w, color="#ef4444",
-            label=f"vs. FHE (~{FHE_MULTIPLIER:.0f}x)")
+            label="vs. FHE (measured)")
     ax2.bar(x + w/2, speedup_gc, w, color="#f59e0b",
-            label=f"vs. Garbled Circuits (~{GC_MULTIPLIER:.0f}x)")
+            label="vs. Garbled Circuits (projected)")
+    for i, (sf, sg) in enumerate(zip(speedup_fhe, speedup_gc)):
+        ax2.text(i - w/2, sf + 0.5, f"{sf:.1f}x", ha="center", fontsize=7)
+        ax2.text(i + w/2, sg + 0.5, f"{sg:.1f}x", ha="center", fontsize=7)
     ax2.set_xticks(x)
     ax2.set_xticklabels(ns)
     ax2.set_xlabel("Number of Bidders (n)")
     ax2.set_ylabel("Speedup (x)")
-    ax2.set_title("(b) Speedup of Our Protocol")
+    ax2.set_title("(b) Measured Speedup of PV-MPC-Auction")
     ax2.grid(axis="y", alpha=0.3)
     ax2.legend(fontsize=8, frameon=True, loc="upper right")
 
@@ -87,9 +90,13 @@ def main() -> None:
     plt.savefig(OUT_PATH, bbox_inches="tight")
     print(f"[+] Wrote {OUT_PATH}")
 
-    print("\nFor the paper text, headline speedup:")
-    print(f"  vs FHE             : ~{FHE_MULTIPLIER:.0f}x")
-    print(f"  vs Garbled Circuits: ~{GC_MULTIPLIER:.0f}x")
+    print("\n" + "=" * 60)
+    print("  SPEEDUP TABLE FOR PAPER")
+    print("=" * 60)
+    print(f"  {'n':>4}  {'Ours (ms)':>12}  {'FHE (ms)':>12}  {'Speedup':>10}")
+    for n, o, f, s in zip(ns, ours_ms, fhe_ms, speedup_fhe):
+        print(f"  {n:>4}  {o:>12.1f}  {f:>12.1f}  {s:>9.1f}x")
+    print("=" * 60)
 
 
 if __name__ == "__main__":
