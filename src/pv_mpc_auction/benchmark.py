@@ -30,9 +30,15 @@ from .protocol import run_auction
 # -----------------------------------------------------------------------------
 # Primitive micro-benchmark
 # -----------------------------------------------------------------------------
-def bench_primitives(group, trials: int = 50) -> Dict[str, float]:
-    """Mean latency (ms) of every cryptographic primitive."""
-    out: Dict[str, float] = {}
+def bench_primitives(group, trials: int = 50) -> Dict[str, Dict[str, float]]:
+    """Mean & std latency (ms) of every cryptographic primitive."""
+    out: Dict[str, Dict[str, float]] = {}
+
+    def record(key, times):
+        out[key] = {
+            "mean_ms": statistics.mean(times),
+            "std_ms":  statistics.stdev(times) if len(times) > 1 else 0.0,
+        }
 
     times = []
     for _ in range(trials):
@@ -238,7 +244,7 @@ def main() -> None:
     print("[+] Benchmarking primitives...")
     prim = bench_primitives(group, trials=50)
     for k, v in prim.items():
-        print(f"  {k:<32} {v:>8.3f} ms")
+        print(f"  {k:<32} mean={v['mean_ms']:>8.3f} ms  std={v['std_ms']:>7.3f} ms")
     (args.out / "primitives.json").write_text(json.dumps(prim, indent=2))
 
     print("\n[+] Running scalability sweep...")
