@@ -40,22 +40,25 @@ def bench_primitives(group, trials: int = 50) -> Dict[str, Dict[str, float]]:
             "std_ms":  statistics.stdev(times) if len(times) > 1 else 0.0,
         }
 
+    # Pedersen commit
     times = []
     for _ in range(trials):
         m = secrets.randbelow(group.q)
         t = time.perf_counter()
         C, r = pedersen.commit(group, m)
         times.append((time.perf_counter() - t) * 1000)
-    out["pedersen_commit_ms"] = statistics.mean(times)
+    record("pedersen_commit_ms", times)
 
+    # Pedersen verify_opening
     times = []
     C, r = pedersen.commit(group, 42)
     for _ in range(trials):
         t = time.perf_counter()
         pedersen.verify_opening(C, 42, r)
         times.append((time.perf_counter() - t) * 1000)
-    out["pedersen_verify_ms"] = statistics.mean(times)
+    record("pedersen_verify_ms", times)
 
+    # ZKP prove
     times = []
     for _ in range(trials):
         m = secrets.randbelow(group.q)
@@ -63,31 +66,34 @@ def bench_primitives(group, trials: int = 50) -> Dict[str, Dict[str, float]]:
         t = time.perf_counter()
         pedersen.prove(C, m, r)
         times.append((time.perf_counter() - t) * 1000)
-    out["zkp_prove_ms"] = statistics.mean(times)
+    record("zkp_prove_ms", times)
 
+    # ZKP verify
     proof = pedersen.prove(C, 42, r)
     times = []
     for _ in range(trials):
         t = time.perf_counter()
         pedersen.verify(C, proof)
         times.append((time.perf_counter() - t) * 1000)
-    out["zkp_verify_ms"] = statistics.mean(times)
+    record("zkp_verify_ms", times)
 
+    # Shamir split (3, 5)
     times = []
     for _ in range(trials):
         s = secrets.randbelow(group.q)
         t = time.perf_counter()
         shamir.split(s, n=5, t=3, q=group.q)
         times.append((time.perf_counter() - t) * 1000)
-    out["shamir_split_3_5_ms"] = statistics.mean(times)
+    record("shamir_split_3_5_ms", times)
 
+    # Shamir reconstruct (3, 5)
     shares = shamir.split(42, n=5, t=3, q=group.q)
     times = []
     for _ in range(trials):
         t = time.perf_counter()
         shamir.reconstruct(shares[:3], q=group.q)
         times.append((time.perf_counter() - t) * 1000)
-    out["shamir_reconstruct_3_5_ms"] = statistics.mean(times)
+    record("shamir_reconstruct_3_5_ms", times)
 
     return out
 
@@ -124,7 +130,7 @@ def bench_scalability(
                 "winning_bid": result.winning_bid,
                 "verified": result.verified,
             })
-            print(f"  n={n:>2}  trial={k}  total={result.timings.total*1000:9.1f} ms  "
+            print(f"  n={n:>3}  trial={k}  total={result.timings.total*1000:9.1f} ms  "
                   f"winner=P{result.winner_index}")
     return records
 
@@ -169,7 +175,8 @@ def plot_scalability(records: List[Dict], out_path: Path) -> None:
     for phase, lab, c in zip(phases, labels, colours):
         vals = mean_of(phase)
         ax1.bar(ns, vals, bottom=bottoms, color=c, label=lab,
-                width=1.6, edgecolor="white", linewidth=0.4)
+                width=max(1.0, min(ns) * 0.3),
+                edgecolor="white", linewidth=0.4)
         bottoms = [b + v for b, v in zip(bottoms, vals)]
     ax1.set_xlabel("Number of Bidders (n)")
     ax1.set_ylabel("Execution Time (ms)")
